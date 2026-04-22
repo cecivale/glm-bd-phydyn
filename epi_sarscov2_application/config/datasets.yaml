@@ -1,0 +1,83 @@
+datasets:
+
+  eubdmm_open:
+    replicates: 3
+    align: false # already aligned from LAPIS
+    mask: true
+    metadata: "lapis"
+    sequences: "lapis"
+    structure: 
+      China:
+        select:
+          country: "China"
+          dateFrom: "2019-12-01"
+          dateTo: "2020-03-08"
+          nextcladeQcOverallScoreFrom: 0.0
+          nextcladeQcOverallScoreTo: 29
+          host: "Homo sapiens" #genbank
+          # host: "Human"
+        subsample:
+          exclude: "resources/data/exclude.txt"
+          n: 30
+          method: "random"
+
+      France:
+        select:
+          country: "France"
+          dateFrom: "2020-01-01"
+          dateTo: "2020-03-08"
+          nextcladeQcOverallScoreFrom: 0.0
+          nextcladeQcOverallScoreTo: 29
+          host: "Homo sapiens" #genbank
+          # host: "Human"
+          # ids_file: "resources/data/eubdmm_ids.csv"
+        subsample:
+          exclude: "resources/data/exclude.txt"
+          n: 30
+          method: "random"
+
+      Germany:
+        select:
+          country: "Germany"
+          dateFrom: "2020-01-01"
+          dateTo: "2020-03-08"
+          nextcladeQcOverallScoreFrom: 0.0
+          nextcladeQcOverallScoreTo: 29
+          host: "Homo sapiens" #genbank
+          # host: "Human"
+          # ids_file: "resources/data/eubdmm_ids.csv"
+        subsample:
+          exclude: "resources/data/exclude.txt"
+          n: 30
+          method: "random"
+
+      Italy:
+        select:
+          country: "Italy"
+          dateFrom: "2020-01-01"
+          dateTo: "2020-03-08"
+          nextcladeQcOverallScoreFrom: 0.0
+          nextcladeQcOverallScoreTo: 29
+          host: "Homo sapiens" #genbank
+          # host: "Human"
+          # ids_file: "resources/data/eubdmm_ids.csv"
+        subsample:
+          exclude: "resources/data/exclude.txt"
+          n: 30
+          method: "random"
+      
+      OtherEU:
+        select:
+          region: "Europe"
+          dateFrom: "2020-01-01"
+          dateTo: "2020-03-08"
+          nextcladeQcOverallScoreFrom: 0.0
+          nextcladeQcOverallScoreTo: 29
+          host: "Homo sapiens" #genbank
+          # host: "Human"
+          add_query: "country not in ['France', 'Germany', 'Italy']"
+        subsample:
+          exclude: "resources/data/exclude.txt"
+          n: 30
+          method: "weights"
+

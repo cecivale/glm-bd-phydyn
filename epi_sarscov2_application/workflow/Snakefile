@@ -1,0 +1,127 @@
+# ------------------------------------------------------------------------------
+#          ---        
+#        / o o \    Project:  epiGLM
+#        V\ Y /V    Snakemake workflow GLM epidemiology analysis
+#    (\   / - \     
+#     )) /    |     
+#     ((/__) ||     Code by Ceci VA 
+# ------------------------------------------------------------------------------
+
+
+import pandas as pd
+import os
+
+configfile: "config/config.yaml" 
+configfile: "config/datasets.yaml" 
+configfile: "config/analyses.yaml" 
+
+wildcard_constraints:
+    dataset="[A-Za-z0-9_]+",
+    analysis="[A-Za-z0-9_]+",
+    sufix="[.][0-9]|[^$]",
+
+rule load_ext_data:
+    message:
+        """
+        Load and save external datasets from urls
+        """
+    output:
+        dataset = "resources/ext_{ext_data}.tsv"
+    params:
+        url =  lambda wildcards: config["external_data"][wildcards.ext_data],
+    run:
+        try:
+            df = pd.read_csv(params.url)
+            df.to_csv(output.dataset, sep="\t")
+        except:
+            print("Reading from url {} failed for {}.".format(params.url, wildcards.ext_data))
+
+rule calculate_otherEU_weigths:
+    message:
+        """
+        Calculate weights for subsampling of Other European composite deme
+        """
+    input:
+        cases = "resources/ext_ecdccases.tsv"
+    output:
+        weights = "results/data/otherEU_weights.tsv"
+    script:
+        "scripts/calculate_sampling_details_1e.R"
+
+
+rule estimate_sampling_probs:
+    message:
+        """
+        Calculate sampling details upper bounds and sp glm predictor. 
+        """
+    input:
+        cases = "resources/ext_ecdccases.tsv",
+        ids = "results/data/{dataset}/ids_combined{sufix,.*}.tsv",
+        metadata_otherEU = "results/data/{dataset}/OtherEU/metadata.tsv",
+        weights = "results/data/otherEU_weights.tsv"
+    output:
+        sampling_details =  "results/data/{dataset}/sampling_details{sufix,.*}.tsv"
+    script:
+        "scripts/calculate_sampling_details_1e.R"
+
+rule build_predictors:
+    message:
+        """
+        Build migration rate GLM predictors
+        """
+    input:
+        weights = "results/data/otherEU_weights.tsv"
+    params:
+        osiindex = "https://raw.githubusercontent.com/OxCGRT/covid-policy-tracker/refs/heads/master/data/OxCGRT_nat_latest.csv",
+    output:
+        out_folder = directory("results/predictors/")
+    script:
+        "scripts/build_predictors.R"
+
+
+module snakemake_phylo_beast2: 
+    snakefile: github("cecivale/snakemake-phylo-beast2", path="workflow/Snakefile", tag = "v0.2") 
+    #snakefile: "snakemake-phylo-beast2/workflow/Snakefile"
+    config: config
+
+use rule * from snakemake_phylo_beast2
+
+
+use rule beast from snakemake_phylo_beast2 as beast with:
+    input:
+        alignment = lambda wildcards: snakemake_phylo_beast2._get_alignment(wildcards), 
+        xml = lambda wildcards: snakemake_phylo_beast2._get_analysis_param(wildcards, "xml"),
+        ids = lambda wildcards: snakemake_phylo_beast2._get_sequence_ids(wildcards),
+        sampling_details = rules.estimate_sampling_probs.output.sampling_details
+    params:
+        xml_params = lambda wildcards: str("dataset=" + wildcards.dataset + wildcards.sufix +  "," + str("mrs=" + snakemake_phylo_beast2._get_mrs(wildcards)) + ","  + str(snakemake_phylo_beast2._get_analysis_param(wildcards, "xml_params")).replace(":", "=").replace(
+            "{", "\"").replace("}", "\"").replace(" ", "").replace("'", "") + "," + str(pd.read_table("results/data/"+ wildcards.dataset + "/sampling_details" + wildcards.sufix + ".tsv", 
+                sep = "\t").values.flatten().tolist()).replace("',", "'=").replace("]", "").replace("[", "").replace("'", "").replace(" ", ""),
+        beast_command = lambda wildcards: snakemake_phylo_beast2._get_analysis_param(wildcards, "command"), 
+        action = lambda wildcards: snakemake_phylo_beast2._get_run_param(wildcards, "action"),
+        user_check = lambda wildcards: snakemake_phylo_beast2._get_run_param(wildcards, "user_check"),
+        folder_name = "results/analysis/{analysis}/chains",
+        file_name = "{dataset}{sufix,.*}.{chain}.r{i}",
+        state_file = "{dataset}{sufix,.*}.{chain}.state",
+        previous_file_name = lambda wildcards: wildcards.dataset + wildcards.sufix + "." + wildcards.chain + ".r" + str(int(wildcards.i) - 1) if wildcards.i != 0 else wildcards.dataset + wildcards.sufix + wildcards.chain + ".r{i}"
+
+rule result_viz:
+    input:
+        cases = "resources/ext_ecdccases.tsv",
+        trace_files = expand("results/analysis/{analysis}{data_seed}.log", analysis = ["mGLM_6p7e_sumprior_lowerboundFR0/eubdmm_open.","no_GLM/eubdmm_open."], data_seed = [0,1,2]),
+        typed_node_ccd0_tree_files =  expand("results/analysis/{analysis}{data_seed}.CCD0.typed.node.tree", analysis = ["mGLM_6p7e_sumprior_lowerboundFR0/eubdmm_open.","no_GLM/eubdmm_open."], data_seed = [0,1,2]),
+        typed_node_mcc_tree_files =  expand("results/analysis/{analysis}{data_seed}.MCC.typed.node.tree", analysis = ["mGLM_6p7e_sumprior_lowerboundFR0/eubdmm_open.","no_GLM/eubdmm_open."], data_seed = [0,1,2]),
+        traj_files =   expand("results/analysis/{analysis}{data_seed}.traj", analysis = ["mGLM_6p7e_sumprior_lowerboundFR0/eubdmm_open.","no_GLM/eubdmm_open."], data_seed = [0,1,2]),
+    output:
+        out_folder = directory("results/figures/")
+
+
+rule all_of_all:
+    input:
+        rules.all.input,
+        "resources/ext_ecdccases.tsv",
+        directory("results/predictors/"),
+        directory("results/figures/"),
+    default_target: True
+
+

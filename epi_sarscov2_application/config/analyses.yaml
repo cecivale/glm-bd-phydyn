@@ -1,0 +1,21 @@
+analyses:
+# Without GLMs
+  no_GLM:
+    xml: "resources/beast_xml/eucovid_bdmmprime_noglm_open.xml"
+    chains: 3
+    xml_params:
+      chain_length: 10000000
+      log_every: 1000
+      log_type_every: 10000
+
+# With GLM
+  mGLM_6p7e_sumprior_lowerboundFR0:
+    xml: "resources/beast_xml/eucovid_bdmmprime_glm_sumprior_lbFR0.xml"
+    chains: 3
+    xml_params:
+      chain_length: 10000000
+      log_every: 1000
+      log_type_every: 10000
+      GLMpredictor_files: "results/predictors/flight_7e_ls.tsv,results/predictors/flight_pop_x_7e_ls.tsv,results/predictors/dist_7e_ls.tsv,results/predictors/sharedborders_7e_nt.tsv,results/predictors/osi_y_7e_ls.tsv,results/predictors/closedborders_7e_nt.tsv"
+      GLMpredictor_changetimes: "results/predictors/changetimes_all_7e.tsv"
+

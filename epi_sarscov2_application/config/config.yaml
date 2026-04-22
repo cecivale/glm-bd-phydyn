@@ -1,0 +1,61 @@
+# ------------------------------------------------------------------------------
+#          ---        
+#        / o o \    Project:  epiGLM
+#        V\ Y /V    Config file GLM SARS-CoV-2 epi analysis
+#    (\   / - \     
+#     )) /    |     
+#     ((/__) ||     Code by Ceci VA 
+# ------------------------------------------------------------------------------
+
+
+run: # analysis name: - dataset name
+  mGLM_6p7e_sumprior_lowerboundFR0:
+    dataset: ["eubdmm_open"]
+    action: "overwrite"
+  no_GLM:
+    dataset: ["eubdmm_open"]
+    action: "overwrite"
+
+target_files: ["log", "trees", "typed.node.trees", "typed.trees", "traj", "MCC.typed.node.tree"]
+
+config_datasets: "config/datasets.yaml"
+config_analyses: "config/analyses.yaml"
+
+external_data:
+  include: "resources/include.txt"
+  exclude: "resources/exclude.txt"
+  ecdccases: "https://opendata.ecdc.europa.eu/covid19/casedistribution/csv"
+  osiindex: "https://raw.githubusercontent.com/OxCGRT/covid-policy-tracker/refs/heads/master/data/OxCGRT_nat_latest.csv"
+
+lapis:
+  database: "open"
+  seq_id: "strain" 
+  batch_size: 50
+  
+align:
+  parameters: 
+
+mask:
+  mask_from_beginning: 100
+  mask_from_end: 200
+  mask_sites: [21846, 21987, 22992, 23012, 23063, 23604, 24410]
+
+beast:
+  command: "beast"
+  action: "overwrite"
+  user_check: FALSE
+  time: 7200
+  mem_mb: 4096
+  threads: 2
+  burnin: 20
+  chains: 3
+  sm_xml: "resources/beast_xml/eucovid_bdmmprime_trajectoryMapper.xml"
+
+logcombiner:
+  command:  "logcombiner"
+  resample: 10000
+  resample_trajs: 1000
+
+treeannotator:
+  command:  "treeannotator"
+  heights: "median"
